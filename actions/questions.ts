@@ -49,7 +49,5 @@ export const createAndGetQuestion = async () => {
     }
   );
 
-  console.log(updatedQuestion);
-
   return updatedQuestion;
 };

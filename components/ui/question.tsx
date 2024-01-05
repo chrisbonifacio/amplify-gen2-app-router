@@ -8,10 +8,12 @@ type QuestionProps = {
 };
 
 export default async function Question({ id }: QuestionProps) {
-  const question = await client.models.Question.get(
+  const { data: question } = await client.models.Question.get(
     { id },
     { selectionSet: ["languages.id", "languages.language.shortName"] }
   );
+
+  console.log("from sub component:", question);
 
   return (
     <div>

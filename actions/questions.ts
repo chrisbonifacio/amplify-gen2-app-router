@@ -35,19 +35,26 @@ export const createAndGetQuestion = async () => {
   //     content: JSON.stringify({ name: "Option #1" }),
   //   });
 
-  const { data: updatedQuestion } = await client.models.Question.get(
+  const { data: firstQuery } = await client.models.Question.get(
     {
       id: question.id,
     },
     {
-      selectionSet: [
-        "id",
-        "grade.id",
-        "subject.id",
-        "languages.language.shortName",
-      ],
+      selectionSet: ["id", "subject.*", "languages.language.name"],
     }
   );
 
-  return updatedQuestion;
+  const { data: secondQuery } = await client.models.Question.get(
+    {
+      id: "c931ba82-1ef8-4771-9069-3a7199ac5bad",
+    },
+    {
+      selectionSet: ["id", "grade.*", "languages.language.name"],
+    }
+  );
+
+  console.log("firstQuery:", firstQuery);
+  console.log("secondQuery:", secondQuery);
+
+  return firstQuery;
 };

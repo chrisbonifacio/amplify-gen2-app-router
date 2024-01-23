@@ -1,5 +1,12 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
+export const UserGroup = {
+  SUPERADMIN: "SuperAdmin",
+  ADMIN: "Admin",
+  TEACHER: "Teacher",
+  STUDENT: "Student",
+} as const;
+
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
 adding a new "isDone" field as a boolean. The authorization rules below
@@ -7,7 +14,109 @@ specify that owners, authenticated via your Auth resource can "create",
 "read", "update", and "delete" their own records. Public users,
 authenticated via an API key, can only "read" records.
 =========================================================================*/
+
 const schema = a.schema({
+  Difficulty: a.enum(["EASY", "MEDIUM", "HARD"]),
+  Task: a
+    .model({
+      title: a.string(),
+      description: a.string(),
+      difficulty: a.ref("Difficulty"),
+    })
+    .authorization([a.allow.public()]),
+  Location: a.customType({
+    name: a.string(),
+  }),
+  Todo: a
+    .model({
+      locations: a.ref("Location"),
+    })
+    .authorization([a.allow.public()]),
+  Institution: a
+    .model({
+      id: a.string().required(),
+      name: a.string().required(),
+      teachers: a.hasMany("Teacher"),
+      stats: a.hasMany("Stats"),
+    })
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow.groupDefinedIn("adminRole").to(["read"]),
+      a.allow.groupDefinedIn("teacherRole").to(["read"]),
+      a.allow.groupDefinedIn("studentRole").to(["read"]),
+    ]),
+  Profile: a
+    .model({
+      firstName: a.string().required(),
+      lastName: a.string().required(),
+      bio: a.string(),
+      profileImage: a.url(),
+    })
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow.owner().inField("id").to(["read", "update", "create"]),
+      a.allow.groupDefinedIn("adminRole"),
+      a.allow.groupDefinedIn("teacherRole").to(["read"]),
+      a.allow.groupDefinedIn("studentRole").to(["read"]),
+    ]),
+  Teacher: a
+    .model({
+      subject: a.string(),
+      profile: a.hasOne("Profile"),
+      institution: a.belongsTo("Institution"),
+    })
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow.groupDefinedIn("adminRole"),
+      a.allow.groupDefinedIn("teacherRole").to(["read"]),
+      a.allow.groupDefinedIn("studentRole").to(["read"]),
+    ]),
+  Stats: a
+    .model({
+      key: a.string().required(),
+      value: a.integer().required(),
+      time: a.datetime().required(),
+      institution: a.belongsTo("Institution"),
+    })
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow.groupDefinedIn("adminRole").to(["read"]),
+      a.allow.groupDefinedIn("teacherRole").to(["read"]),
+      a.allow.groupDefinedIn("studentRole").to(["read"]),
+    ])
+    .identifier(["key", "time"]),
+  Subject: a
+    .model({
+      name: a.string().required(),
+    })
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow
+        .specificGroups([UserGroup.ADMIN, UserGroup.TEACHER, UserGroup.STUDENT])
+        .to(["read"]),
+    ]),
+  Grade: a
+    .model({
+      name: a.string().required(),
+    })
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow
+        .specificGroups([UserGroup.ADMIN, UserGroup.TEACHER, UserGroup.STUDENT])
+        .to(["read"]),
+    ]),
+  Language: a
+    .model({
+      name: a.string().required(),
+      shortName: a.string().required(),
+      flag: a.url(),
+    })
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow
+        .specificGroups([UserGroup.ADMIN, UserGroup.TEACHER, UserGroup.STUDENT])
+        .to(["read"]),
+    ]),
   Question: a
     .model({
       excerpt: a.string().required(),
@@ -15,14 +124,12 @@ const schema = a.schema({
       subject: a.hasOne("Subject").required(),
       languages: a.hasMany("QuestionLanguage"),
     })
-    .authorization([a.allow.public()]),
-  Language: a
-    .model({
-      name: a.string().required(),
-      shortName: a.string().required(),
-      flag: a.url(),
-    })
-    .authorization([a.allow.public()]),
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow
+        .specificGroups([UserGroup.ADMIN, UserGroup.TEACHER, UserGroup.STUDENT])
+        .to(["read"]),
+    ]),
   QuestionLanguage: a
     .model({
       content: a.json().required(),
@@ -30,28 +137,55 @@ const schema = a.schema({
       language: a.hasOne("Language"),
       options: a.hasMany("QuestionOption"),
     })
-    .authorization([a.allow.public()]),
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow
+        .specificGroups([UserGroup.ADMIN, UserGroup.TEACHER, UserGroup.STUDENT])
+        .to(["read"]),
+    ]),
   QuestionOption: a
     .model({
       content: a.json().required(),
       question: a.belongsTo("QuestionLanguage"),
     })
-    .authorization([a.allow.public()]),
-  Grade: a
-    .model({
-      score: a.integer(),
+    .authorization([
+      a.allow.specificGroup(UserGroup.SUPERADMIN),
+      a.allow
+        .specificGroups([UserGroup.ADMIN, UserGroup.TEACHER, UserGroup.STUDENT])
+        .to(["read"]),
+    ]),
+  CreateUserResponse: a.customType({
+    id: a
+      .string()
+      .required()
+      .authorization([
+        a.allow.specificGroups([UserGroup.SUPERADMIN, UserGroup.ADMIN]),
+      ]),
+  }),
+  ApiBaseResponse: a.customType({
+    success: a
+      .boolean()
+      .authorization([a.allow.specificGroup(UserGroup.SUPERADMIN)]),
+  }),
+  createInstitutionGroups: a
+    .mutation()
+    .arguments({ institution: a.string().required() })
+    .returns(a.ref("ApiBaseResponse"))
+    .function("adminActions")
+    .authorization([a.allow.specificGroup(UserGroup.SUPERADMIN)]),
+  createUser: a
+    .mutation()
+    .arguments({
+      email: a.string().required(),
+      password: a.string().required(),
+      group: a.string().required(),
+      institution: a.string(),
     })
-    .authorization([a.allow.public()]),
-  Subject: a
-    .model({
-      name: a.string(),
-    })
-    .authorization([a.allow.public()]),
-  Note: a
-    .model({
-      content: a.string(),
-    })
-    .authorization([a.allow.public()]),
+    .returns(a.ref("CreateUserResponse"))
+    .function("adminActions")
+    .authorization([
+      a.allow.specificGroups([UserGroup.SUPERADMIN, UserGroup.ADMIN]),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

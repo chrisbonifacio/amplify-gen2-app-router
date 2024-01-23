@@ -1,11 +1,8 @@
 import { createAndGetQuestion } from "@/actions/questions";
 import Question from "@/components/ui/question";
-import { client } from "@/utils/client";
 
 export default async function Home() {
   const question = await createAndGetQuestion();
-
-  // console.log("from parent component:", question);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
@@ -15,7 +12,7 @@ export default async function Home() {
         <pre>{JSON.stringify(question, null, 2)}</pre>
       </div>
 
-      <Question id={question.id} />
+      <Question id={question?.id} />
     </main>
   );
 }

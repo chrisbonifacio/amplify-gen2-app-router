@@ -29,7 +29,8 @@ const schema = a.schema({
   }),
   Todo: a
     .model({
-      locations: a.ref("Location"),
+      name: a.string().required(),
+      completed: a.boolean().default(false),
     })
     .authorization([a.allow.public()]),
   Institution: a

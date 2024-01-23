@@ -4,6 +4,7 @@ import { client } from "@/utils/client";
 
 export const createAndGetQuestion = async () => {
   const { data: grade } = await client.models.Grade.create({
+    name: "Math Exam",
     score: 10,
   });
 
@@ -46,7 +47,7 @@ export const createAndGetQuestion = async () => {
 
   const { data: secondQuery } = await client.models.Question.get(
     {
-      id: "c931ba82-1ef8-4771-9069-3a7199ac5bad",
+      id: question.id,
     },
     {
       selectionSet: ["id", "grade.*", "languages.language.name"],

@@ -98,6 +98,7 @@ const schema = a.schema({
   Grade: a
     .model({
       name: a.string().required(),
+      score: a.integer().required(),
     })
     .authorization([
       a.allow.specificGroup(UserGroup.SUPERADMIN),
